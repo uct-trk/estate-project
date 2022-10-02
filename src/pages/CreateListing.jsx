@@ -11,6 +11,7 @@ import {
 } from "firebase/storage";
 import { db } from "../firebase.config";
 import { v4 as uuidv4 } from "uuid";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 function CreateListing() {
   // eslint-disable-next-line
@@ -23,13 +24,13 @@ function CreateListing() {
     bathrooms: 1,
     parking: false,
     furnished: false,
-    address: "",
+    location: "",
     offer: false,
     regularPrice: 0,
     discountedPrice: 0,
     images: {},
-    latitude: 0,
-    longitude: 0,
+    lat: 0,
+    lng: 0,
   });
   const {
     type,
@@ -38,13 +39,13 @@ function CreateListing() {
     bathrooms,
     parking,
     furnished,
-    address,
+    location,
     offer,
     regularPrice,
     discountedPrice,
     images,
-    latitude,
-    longitude,
+    lat,
+    lng,
   } = formData;
 
   const auth = getAuth();
@@ -55,7 +56,7 @@ function CreateListing() {
     if (isMounted) {
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          setFormData({ ...formData, useRef: user.id });
+          setFormData({ ...formData, userRef: user.uid });
         } else {
           navigate("/sign-in");
         }
@@ -155,7 +156,19 @@ function CreateListing() {
       return;
     });
 
-    console.log(imageUrls);
+    const formDataCopy = {
+      ...formData,
+      imageUrls,
+      timestamp: serverTimestamp(),
+    };
+
+    delete formDataCopy.images;
+    !formDataCopy.offer && delete formDataCopy.discountedPrice;
+
+    const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+    toast.success("Listing saved");
+
+    navigate(`/category/${formDataCopy.type}/${docRef.id}`);
   };
 
   const onMutate = (e) => {
@@ -315,8 +328,8 @@ function CreateListing() {
           <textarea
             className="formInputAddress"
             type="text"
-            id="address"
-            value={address}
+            id="location"
+            value={location}
             onChange={onMutate}
             required
           />
@@ -328,8 +341,8 @@ function CreateListing() {
                 <input
                   className="formInputSmall"
                   type="number"
-                  id="latitude"
-                  value={latitude}
+                  id="lat"
+                  value={lat}
                   onChange={onMutate}
                   required
                 />
@@ -339,8 +352,8 @@ function CreateListing() {
                 <input
                   className="formInputSmall"
                   type="number"
-                  id="longitude"
-                  value={longitude}
+                  id="lng"
+                  value={lng}
                   onChange={onMutate}
                   required
                 />
